@@ -16,6 +16,31 @@ straight1 <- read_csv("Data/ch_a_c1_master.csv")
 
 simulateResiduals(model, plot = TRUE)
 
+#pivot----
+
+belt_site_wide <- belt_site %>%
+  pivot_wider(
+    names_from = species,
+    values_from = species_abundance,
+    values_fill = 0
+  )
+
+#this dataset now gives me the 0's needed for absence
+
+belt_site_long <- belt_site_wide %>%
+  pivot_longer(
+    cols = c(leather, mottled, ochre, blood, pink, sunflower),
+    names_to = "species",
+    values_to = "species_abundance"
+  ) %>%
+  mutate(species = as.factor(species),
+  )
+                  
+
+#export csv
+
+write_csv(df, "./folder/folder/nameofdoc.csv")
+
 #dot whisker plot examples below----
 
 ggplot(data = data_long,
