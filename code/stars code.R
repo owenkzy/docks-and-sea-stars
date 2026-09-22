@@ -191,6 +191,34 @@ among_zero <- trial_zero %>%
   select(!average_size) %>%
   distinct()
 
+
+#dock distance info
+among_site %>%
+  group_by(type) %>%
+  summarise(
+    n = n(),
+    mean_distance = mean(dist_from_dock_new, na.rm = TRUE),
+    sd_distance = sd(dist_from_dock_new, na.rm = TRUE),
+    min_distance = min(dist_from_dock_new, na.rm = TRUE),
+    max_distance = max(dist_from_dock_new, na.rm = TRUE)
+  )
+
+#site info
+among_site %>%
+  summarise(
+    mean_slope = mean(slope, na.rm = TRUE),
+    sd_slope = sd(slope, na.rm = TRUE),
+    min_slope = min(slope, na.rm = TRUE),
+    max_slope = max(slope, na.rm = TRUE),
+    mean_rock = mean(rock_percent, na.rm = TRUE),
+    sd_rock = sd(rock_percent, na.rm = TRUE),
+    min_rock = min(rock_percent, na.rm = TRUE),
+    max_rock = max(rock_percent, na.rm = TRUE),
+    mean_sand = mean(sand_percent, na.rm = TRUE),
+    sd_sand = sd(sand_percent, na.rm = TRUE),
+    min_sand = min(sand_percent, na.rm = TRUE),
+    max_sand = max(sand_percent, na.rm = TRUE))
+
 #what's correlated with one another, will impact the model because of iid----
 
 #cramers v is great for categorical stuff
@@ -1780,7 +1808,6 @@ dock_size_plot <- ggplot() +
   geom_jitter(
     data = among_site,
     aes(x = type, y = average_size),
-    # use your actual response column
     width = 0.12,
     height = 0,
     size = 2.5,
@@ -1793,7 +1820,7 @@ dock_size_plot <- ggplot() +
     linewidth = 0.9
   ) +
   geom_point(data = dock_pred, aes(x = x, y = predicted), size = 4) +
-  labs(x = "Site type", y = "Average sea star size (cm)") +
+  labs(x = "Site type", y = expression("Average sea star size (cm)")) +
   pub_theme1()
 print(dock_size_plot)
 ggsave(
@@ -1824,7 +1851,7 @@ full_size_plot <- ggplot() +
     linewidth = 0.9
   ) +
   geom_point(data = dock_pred, aes(x = x, y = predicted), size = 4) +
-  labs(x = "Site type", y = "Average sea star size (cm)") +
+  labs(x = "Site type", y = expression("Average sea star size (cm)")) +
   pub_theme1()
 print(full_size_plot)
 
@@ -1842,6 +1869,95 @@ ggsave(
 
 simulateResiduals(dock_size, plot = TRUE)
 simulateResiduals(full_dock_size, plot = TRUE)
+
+#COVARIATES FOR SIZE NOW----
+
+#cluster for dock size
+
+dock_pred <- ggeffects::ggpredict(dock_size,
+                                  terms = "cluster"
+                                  )
+
+dock_size_cluster_plot <- ggplot() +
+  geom_jitter(
+    data = among_site,
+    aes(x = cluster, y = average_size),
+    width = 0.12,
+    height = 0,
+    size = 2.5,
+    alpha = 0.35) +
+  geom_errorbar(
+    data = dock_pred,
+    aes(x = x, ymin = conf.low, ymax = conf.high),
+    width = 0.12,
+    linewidth = 0.9) +
+  geom_point(data = dock_pred, aes(x = x, y = predicted), size = 4) +
+  labs(x = "Cluster", y = expression("Average sea star size (cm)")) +
+  pub_theme1()
+print(dock_size_cluster_plot)
+
+
+#rock scaled for full dock size
+dock_pred <- ggeffects::ggpredict(full_dock_size,
+                                  terms = "rock_scaled"
+                                  )
+
+full_dock_size_rock_plot <- ggplot() +
+  geom_point(
+    data = among_site,
+    aes(x = rock_scaled, y = average_size),
+    size = 2.5,
+    alpha = 0.35) +
+  geom_ribbon(
+    data = dock_pred,
+    aes(x = x, ymin = conf.low, ymax = conf.high),
+    alpha = 0.2) +
+  geom_line(
+    data = dock_pred,
+    aes(x = x, y = predicted),
+    linewidth = 1) +
+  labs(
+    x = "Scaled rock cover",
+    y = expression("Average sea star size (cm)")) +
+  pub_theme1()
+print(full_dock_size_rock_plot)
+
+#stitch size again----
+
+size_plot_a <-
+  full_size_plot/
+  full_dock_size_rock_plot +
+  plot_layout(
+    heights = c(1.5, 1),
+    axes = "collect_y",
+    axis_titles = "collect_y"
+  )  + plot_annotation(tag_levels = "A")
+print(size_plot_a)
+ggsave(
+  "figures/size_fulldock.png",
+  width = 7,
+  height = 6,
+  units = "in",
+  dpi = 300
+)
+
+
+size_plot_b <-
+  dock_size_plot/
+  dock_size_cluster_plot +
+  plot_layout(
+    heights = c(1.5, 1),
+    axes = "collect_y",
+    axis_titles = "collect_y"
+  )  + plot_annotation(tag_levels = "A")
+print(size_plot_b)
+ggsave(
+  "figures/size_dock.png",
+  width = 7,
+  height = 6,
+  units = "in",
+  dpi = 300
+)
 #abundance time----
 #doing this in density, again...
 
@@ -1861,14 +1977,12 @@ full_debris_number_plot <- ggplot() +
     width = 0.12,
     height = 0,
     size = 2.5,
-    alpha = 0.35
-  ) +
+    alpha = 0.35) +
   geom_errorbar(
     data = dock_pred,
     aes(x = x, ymin = conf.low, ymax = conf.high),
     width = 0.12,
-    linewidth = 0.9
-  ) +
+    linewidth = 0.9) +
   geom_point(data = dock_pred, aes(x = x, y = predicted), size = 4) +
   labs(x = "Debris score", y = expression("Sea star density (stars " * m ^
                                             {
@@ -1891,14 +2005,12 @@ full_mussel_number_plot <- ggplot() +
     width = 0.12,
     height = 0,
     size = 2.5,
-    alpha = 0.35
-  ) +
+    alpha = 0.35) +
   geom_errorbar(
     data = dock_pred,
     aes(x = x, ymin = conf.low, ymax = conf.high),
     width = 0.12,
-    linewidth = 0.9
-  ) +
+    linewidth = 0.9) +
   geom_point(data = dock_pred, aes(x = x, y = predicted), size = 4) +
   labs(x = "Mussel score", y = expression("Sea star density (stars " * m ^
                                             {
@@ -1923,6 +2035,156 @@ summary(full_debris_number)
 simulateResiduals(full_debris_number, plot = TRUE)
 simulateResiduals(full_mussel_number, plot = TRUE)
 summary(full_mussel_number)
+
+#ok now we're gonna do the covariates for abundance MUSSEL----
+#slope for full mussel number
+
+dock_pred <- ggeffects::ggpredict(full_mussel_number,
+                                  terms = "slope_scaled",
+                                  condition = c(area_transect = 1))
+
+full_mussel_number_slope_plot <- ggplot() +
+  geom_point(
+    data = among_site,
+    aes(x = slope_scaled, y = star_density),
+    size = 2.5,
+    alpha = 0.35) +
+  geom_ribbon(
+    data = dock_pred,
+    aes(x = x, ymin = conf.low, ymax = conf.high),
+    alpha = 0.2) +
+  geom_line(
+    data = dock_pred,
+    aes(x = x, y = predicted),
+    linewidth = 1) +
+  labs(
+    x = "Scaled slope",
+    y = expression("Sea star density (stars " * m^{-2} * ")")) +
+  pub_theme1()
+full_mussel_number_slope_plot
+
+#rock scaled for mussel number
+
+dock_pred <- ggeffects::ggpredict(full_mussel_number,
+                                  terms = "rock_scaled",
+                                  condition = c(area_transect = 1))
+
+full_mussel_number_rock_plot <- ggplot() +
+  geom_point(
+    data = among_site,
+    aes(x = rock_scaled, y = star_density),
+    size = 2.5,
+    alpha = 0.35) +
+  geom_ribbon(
+    data = dock_pred,
+    aes(x = x, ymin = conf.low, ymax = conf.high),
+    alpha = 0.2) +
+  geom_line(
+    data = dock_pred,
+    aes(x = x, y = predicted),
+    linewidth = 1) +
+  labs(
+    x = "Scaled rock cover",
+    y = expression("Sea star density (stars " * m^{-2} * ")")) +
+  pub_theme1()
+full_mussel_number_rock_plot
+
+#ok now we're gonna do the covariates for abundance debris----
+#rock scaled
+
+dock_pred <- ggeffects::ggpredict(full_debris_number,
+                                  terms = "rock_scaled",
+                                  condition = c(area_transect = 1))
+
+full_debris_number_rock_plot <- ggplot() +
+  geom_point(
+    data = among_site,
+    aes(x = rock_scaled, y = star_density),
+    size = 2.5,
+    alpha = 0.35) +
+  geom_ribbon(
+    data = dock_pred,
+    aes(x = x, ymin = conf.low, ymax = conf.high),
+    alpha = 0.2) +
+  geom_line(
+    data = dock_pred,
+    aes(x = x, y = predicted),
+    linewidth = 1) +
+  labs(
+    x = "Scaled rock cover",
+    y = expression("Sea star density (stars " * m^{-2} * ")")) +
+  pub_theme1()
+full_debris_number_rock_plot
+
+#cluster for full debris number
+
+dock_pred <- ggeffects::ggpredict(full_debris_number,
+                                  terms = "cluster",
+                                  condition = c(area_transect = 1))
+
+full_debris_number_cluster_plot <- ggplot() +
+  geom_jitter(
+    data = among_site,
+    aes(x = cluster, y = star_density),
+    width = 0.12,
+    height = 0,
+    size = 2.5,
+    alpha = 0.35) +
+  geom_errorbar(
+    data = dock_pred,
+    aes(x = x, ymin = conf.low, ymax = conf.high),
+    width = 0.12,
+    linewidth = 0.9) +
+  geom_point(data = dock_pred, aes(x = x, y = predicted), size = 4) +
+  labs(x = "Cluster", y = expression("Sea star density (stars " * m ^
+                                            {
+                                              -2
+                                            } * ")")) +
+  pub_theme1()
+print(full_debris_number_cluster_plot)
+
+#mega stitch time for density----
+
+density_plot_a <-
+  full_debris_number_plot +
+  full_debris_number_rock_plot +
+  full_debris_number_cluster_plot + 
+  plot_layout(
+    design = "AA
+    BC",
+    heights = c(1.5, 1),
+    axes = "collect_y",
+    axis_titles = "collect_y"
+  )  + plot_annotation(tag_levels = "A")
+print(density_plot_a)
+ggsave(
+  "figures/density_fulldebris.png",
+  width = 7,
+  height = 6,
+  units = "in",
+  dpi = 300
+)
+density_plot_b <-
+  full_mussel_number_plot +
+  full_mussel_number_rock_plot +
+  full_mussel_number_slope_plot +
+  plot_layout(
+    design = "AA
+    BC",
+    heights = c(1.5, 1),
+    axes = "collect_y",
+    axis_titles = "collect_y"
+  )  + plot_annotation(tag_levels = "A")
+print(density_plot_b)
+ggsave(
+  "figures/density_fullmussel.png",
+  width = 7,
+  height = 6,
+  units = "in",
+  dpi = 300
+)
+
+
 #pycno time
 
 #incorporating more of habitat characteristics inside of the site model----
