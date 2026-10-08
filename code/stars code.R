@@ -200,8 +200,7 @@ among_site %>%
     mean_distance = mean(dist_from_dock_new, na.rm = TRUE),
     sd_distance = sd(dist_from_dock_new, na.rm = TRUE),
     min_distance = min(dist_from_dock_new, na.rm = TRUE),
-    max_distance = max(dist_from_dock_new, na.rm = TRUE)
-  )
+    max_distance = max(dist_from_dock_new, na.rm = TRUE))
 
 #site info
 among_site %>%
@@ -335,8 +334,8 @@ dock_debris <- glmmTMB(
   total_abundance ~ debris_score + (1 |
                                       pair) + cluster + offset(log(area_transect)),
   family = nbinom2(link = "log"),
-  data = among_site
-)
+  data = among_site)
+
 summary(dock)
 simulateResiduals(dock, plot = TRUE)
 check_collinearity(dock)
@@ -457,8 +456,28 @@ summary(full_mussel_number)
 
 #AIC COMPETETING SIZE TIME-----
 
+
+ochre <- read_csv("data/stars_belt - Sheet1 (1).csv")  %>%
+  group_by(site, date, species) %>%
+  summarise(average_size = mean(size, na.rm = TRUE),
+            species_abundance = n(), .groups = "drop") %>% 
+  group_by(site,date) %>%
+  mutate(total_abundance = sum(species_abundance, na.rm = TRUE),
+         proportion = species_abundance/total_abundance,
+         weighted_size = average_size*proportion) %>% 
+  ungroup()
+
+new_size <- ochre %>%
+  group_by(site, date) %>%
+  summarise(site_average = sum(weighted_size, na.rm = TRUE),
+            .groups = "drop")
+
+
+among_site <- among_site %>% 
+  full_join(new_size, by = c("site","date"))
+
 #null model
-null <- glmmTMB(average_size ~ 1 + (1 |pair),
+null <- glmmTMB(site_average ~ 1 + (1 |pair),
                 family = Gamma(link = "log"),
                 data = among_site)
 summary(null)
@@ -466,7 +485,7 @@ simulateResiduals(null, plot = TRUE)
 
 #spatial model
 
-spatial <- glmmTMB(average_size ~ cluster + (1 | pair),
+spatial <- glmmTMB(site_average ~ cluster + (1 | pair),
                    family = Gamma(link = "log"),
                    data = among_site)
 summary(spatial)
@@ -476,7 +495,7 @@ check_collinearity(spatial)
 #habitat model
 
 habitat <- glmmTMB(
-  average_size ~ slope_scaled + rock_scaled + (1 | pair),
+  site_average ~ slope_scaled + rock_scaled + (1 | pair),
   family = Gamma(link = "log"),
   data = among_site
 )
@@ -487,7 +506,7 @@ check_collinearity(habitat)
 
 #latitude model
 
-lat <- glmmTMB(average_size ~ lat_scaled + (1 | pair)
+lat <- glmmTMB(site_average ~ lat_scaled + (1 | pair)
                ,
                family = Gamma(link = "log"),
                data = among_site)
@@ -498,25 +517,25 @@ simulateResiduals(lat, plot = TRUE)
 #dock model
 
 dock <- glmmTMB(
-  average_size ~ type + cluster + (1 |
+  site_average ~ type + cluster + (1 |
                                      pair),
   family = Gamma(link = "log"),
   data = among_site
 )
 dock_mussel <- glmmTMB(
-  average_size ~ mussel_score + cluster + (1 |
+  site_average ~ mussel_score + cluster + (1 |
                                              pair),
   family = Gamma(link = "log"),
   data = among_site
 )
 dock_debris <- glmmTMB(
-  average_size ~ debris_score + cluster + (1 |
+  site_average ~ debris_score + cluster + (1 |
                                              pair),
   family = Gamma(link = "log"),
   data = among_site
 )
 dock_distance <- glmmTMB(
-  average_size ~ distance_scaled  +
+  site_average ~ distance_scaled  +
     (1 |
        pair) + cluster,
   family = Gamma(link = "log"),
@@ -529,26 +548,26 @@ check_collinearity(dock)
 #full model
 
 full <- glmmTMB(
-  average_size ~ cluster + type + slope_scaled +  rock_scaled +
+  site_average ~ cluster + type + slope_scaled +  rock_scaled +
     (1 | pair),
   family = Gamma(link = "log"),
   data = among_site
 )
 
 full_mussel <- glmmTMB(
-  average_size ~ cluster + mussel_score + slope_scaled +  rock_scaled +
+  site_average ~ cluster + mussel_score + slope_scaled +  rock_scaled +
     (1 | pair),
   family = Gamma(link = "log"),
   data = among_site
 )
 full_debris <- glmmTMB(
-  average_size ~ cluster + debris_score + slope_scaled +  rock_scaled +
+  site_average ~ cluster + debris_score + slope_scaled +  rock_scaled +
     (1 | pair),
   family = Gamma(link = "log"),
   data = among_site
 )
 full_distance <- glmmTMB(
-  average_size ~ distance_scaled + slope_scaled + rock_scaled  +
+  site_average ~ distance_scaled + slope_scaled + rock_scaled  +
     (1 |
        pair) + cluster,
   family = Gamma(link = "log"),
@@ -592,7 +611,7 @@ round(r2_values, 3)
 
 #ggeffects time, needs the models saved so need a unique ID
 dock_size <- glmmTMB(
-  average_size ~ type + cluster + (1 |
+  site_average ~ type + cluster + (1 |
                                      pair),
   family = Gamma(link = "log"),
   data = among_site
@@ -600,14 +619,13 @@ dock_size <- glmmTMB(
 summary(dock_size)
 
 full_dock_size <- glmmTMB(
-  average_size ~ cluster + type + slope_scaled +  rock_scaled +
+  site_average ~ cluster + type + slope_scaled +  rock_scaled +
     (1 | pair),
   family = Gamma(link = "log"),
   data = among_site
 )
 summary(full_dock_size)
 simulateResiduals(full_dock_size, plot = TRUE)
-
 
 #AIC competing time RICHNESS----
 
@@ -897,24 +915,19 @@ ggplot(nmds_scores, aes(NMDS1, NMDS2)) +
     values = c(
       "dock"       = "#D55E00",
       "inter-dock" = "#009E73",
-      "no-dock"    = "#0072B2"
-    ),
+      "no-dock"    = "#0072B2"),
     labels = c(
       "dock"       = "Dock",
       "inter-dock" = "Inter-dock",
-      "no-dock"    = "No-dock"
-    )
-  ) +
+      "no-dock"    = "No-dock")) +
   scale_fill_manual(values = c(
     "dock"       = "#D55E00",
     "inter-dock" = "#009E73",
-    "no-dock"    = "#0072B2"
-  )) +
+    "no-dock"    = "#0072B2")) +
   scale_shape_manual(values = c(
     "dock"       = 16,
     "inter-dock" = 17,
-    "no-dock"    = 15
-  )) +
+    "no-dock"    = 15)) +
   coord_equal(clip = "off") +
   scale_x_continuous(expand = expansion(mult = 0.15)) +
   scale_y_continuous(expand = expansion(mult = 0.15)) +
@@ -923,8 +936,7 @@ ggplot(nmds_scores, aes(NMDS1, NMDS2)) +
     y = "NMDS2",
     colour = "Site type",
     shape = "Site type",
-    subtitle = paste0("Stress = ", round(nmds$stress, 3))
-  ) +
+    subtitle = paste0("Stress = ", round(nmds$stress, 3))) +
   theme_classic(base_size = 13) +
   theme(
     legend.position = "right",
@@ -936,8 +948,7 @@ ggsave(
   width = 6,
   height = 4,
   units = "in",
-  dpi = 300
-)
+  dpi = 300)
 
 # Fixed limits so points remain in the same positions between slides
 x_limits <- range(c(nmds_scores$NMDS1, species_scores$NMDS1), na.rm = TRUE)
@@ -1081,8 +1092,7 @@ permanova <- adonis2(
   community ~ type,
   data = community_metadata,
   method = "bray",
-  permutations = 9999
-)
+  permutations = 9999)
 
 permanova
 
@@ -1274,18 +1284,15 @@ geom_segment(
       x = 0,
       y = 0,
       xend = NMDS1 * arrow_scale,
-      yend = NMDS2 * arrow_scale
-    ),
+      yend = NMDS2 * arrow_scale),
     inherit.aes = FALSE,
     arrow = grid::arrow(length = grid::unit(0.12, "cm")),
-    linewidth = 0.4
-  ) +
+    linewidth = 0.4) +
   geom_text(
     data = vec_sig,
     aes(x = label_x, y = label_y, label = species),
     inherit.aes = FALSE,
-    size = 4
-  ) +
+    size = 4) +
   coord_fixed(ratio = 1) +
   theme(
     legend.position = "bottom",
@@ -1303,8 +1310,7 @@ geom_segment(
   guides(
     colour = guide_legend(nrow = 1),
     shape = guide_legend(nrow = 1),
-    fill = guide_legend(nrow = 1)
-  )
+    fill = guide_legend(nrow = 1))
 
 nmds_final
 ggsave(
@@ -1313,8 +1319,7 @@ ggsave(
   width = 7,
   height = 5,
   units = "in",
-  dpi = 300
-)
+  dpi = 300)
 
 #let's do some pycno stuff----
 
@@ -1344,8 +1349,7 @@ null <- glmmTMB(
   pycno_count ~ 1 + (1 |
                        pair) + offset(log(area_transect)),
   family = nbinom2(link = "log"),
-  data = sun
-)
+  data = sun)
 summary(null)
 simulateResiduals(null, plot = TRUE)
 
@@ -1820,6 +1824,7 @@ dock_size_plot <- ggplot() +
     linewidth = 0.9
   ) +
   geom_point(data = dock_pred, aes(x = x, y = predicted), size = 4) +
+  scale_x_discrete(labels = tools::toTitleCase) +
   labs(x = "Site type", y = expression("Average sea star size (cm)")) +
   pub_theme1()
 print(dock_size_plot)
@@ -1851,24 +1856,10 @@ full_size_plot <- ggplot() +
     linewidth = 0.9
   ) +
   geom_point(data = dock_pred, aes(x = x, y = predicted), size = 4) +
+  scale_x_discrete(labels = tools::toTitleCase) +
   labs(x = "Site type", y = expression("Average sea star size (cm)")) +
   pub_theme1()
 print(full_size_plot)
-
-#nice ok now to make them panel A and panel B
-
-size_plot <- (dock_size_plot + full_size_plot + plot_annotation(tag_level = "A"))
-ggsave(
-  "figures/size.png",
-  width = 6,
-  height = 4,
-  units = "in",
-  dpi = 300
-)
-
-
-simulateResiduals(dock_size, plot = TRUE)
-simulateResiduals(full_dock_size, plot = TRUE)
 
 #COVARIATES FOR SIZE NOW----
 
@@ -1892,6 +1883,7 @@ dock_size_cluster_plot <- ggplot() +
     width = 0.12,
     linewidth = 0.9) +
   geom_point(data = dock_pred, aes(x = x, y = predicted), size = 4) +
+  scale_x_discrete(labels = toupper) +
   labs(x = "Cluster", y = expression("Average sea star size (cm)")) +
   pub_theme1()
 print(dock_size_cluster_plot)
@@ -1917,7 +1909,7 @@ full_dock_size_rock_plot <- ggplot() +
     aes(x = x, y = predicted),
     linewidth = 1) +
   labs(
-    x = "Scaled rock cover",
+    x = "Hard substrate cover (%)",
     y = expression("Average sea star size (cm)")) +
   pub_theme1()
 print(full_dock_size_rock_plot)
@@ -1925,13 +1917,21 @@ print(full_dock_size_rock_plot)
 #stitch size again----
 
 size_plot_a <-
-  full_size_plot/
+  full_size_plot /
   full_dock_size_rock_plot +
   plot_layout(
     heights = c(1.5, 1),
     axes = "collect_y",
-    axis_titles = "collect_y"
-  )  + plot_annotation(tag_levels = "A")
+    axis_titles = "collect_y") +
+  plot_annotation(tag_levels = "A") &
+  theme(
+    plot.tag.location = "panel",
+    plot.tag.position = c(0.03, 0.97),
+    plot.tag = element_text(
+      face = "bold",
+      size = 14,
+      hjust = 0,
+      vjust = 1))
 print(size_plot_a)
 ggsave(
   "figures/size_fulldock.png",
@@ -1948,8 +1948,16 @@ size_plot_b <-
   plot_layout(
     heights = c(1.5, 1),
     axes = "collect_y",
-    axis_titles = "collect_y"
-  )  + plot_annotation(tag_levels = "A")
+    axis_titles = "collect_y")  +
+  plot_annotation(tag_levels = "A") &
+  theme(
+    plot.tag.location = "panel",
+    plot.tag.position = c(0.03, 0.97),
+    plot.tag = element_text(
+      face = "bold",
+      size = 14,
+      hjust = 0,
+      vjust = 1))
 print(size_plot_b)
 ggsave(
   "figures/size_dock.png",
@@ -1984,7 +1992,7 @@ full_debris_number_plot <- ggplot() +
     width = 0.12,
     linewidth = 0.9) +
   geom_point(data = dock_pred, aes(x = x, y = predicted), size = 4) +
-  labs(x = "Debris score", y = expression("Sea star density (stars " * m ^
+  labs(x = "Debris score", y = expression("Sea star density (individuals " * m ^
                                             {
                                               -2
                                             } * ")")) +
@@ -2012,29 +2020,13 @@ full_mussel_number_plot <- ggplot() +
     width = 0.12,
     linewidth = 0.9) +
   geom_point(data = dock_pred, aes(x = x, y = predicted), size = 4) +
-  labs(x = "Mussel score", y = expression("Sea star density (stars " * m ^
+  labs(x = "Mussel score", y = expression("Sea star density (individuals " * m ^
                                             {
                                               -2
                                             } * ")")) +
   pub_theme1()
 print(full_mussel_number_plot)
 
-#stitch them together
-
-density_plot <- (full_debris_number_plot + full_mussel_number_plot + plot_annotation(tag_level = "A"))
-print(density_plot)
-ggsave(
-  "figures/density.png",
-  width = 6,
-  height = 4,
-  units = "in",
-  dpi = 300
-)
-
-summary(full_debris_number)
-simulateResiduals(full_debris_number, plot = TRUE)
-simulateResiduals(full_mussel_number, plot = TRUE)
-summary(full_mussel_number)
 
 #ok now we're gonna do the covariates for abundance MUSSEL----
 #slope for full mussel number
@@ -2058,8 +2050,8 @@ full_mussel_number_slope_plot <- ggplot() +
     aes(x = x, y = predicted),
     linewidth = 1) +
   labs(
-    x = "Scaled slope",
-    y = expression("Sea star density (stars " * m^{-2} * ")")) +
+    x = "Slope (°)",
+    y = expression("Sea star density (individuals " * m^{-2} * ")")) +
   pub_theme1()
 full_mussel_number_slope_plot
 
@@ -2084,8 +2076,8 @@ full_mussel_number_rock_plot <- ggplot() +
     aes(x = x, y = predicted),
     linewidth = 1) +
   labs(
-    x = "Scaled rock cover",
-    y = expression("Sea star density (stars " * m^{-2} * ")")) +
+    x = "Hard substrate cover (%)",
+    y = expression("Sea star density (individuals " * m^{-2} * ")")) +
   pub_theme1()
 full_mussel_number_rock_plot
 
@@ -2111,8 +2103,8 @@ full_debris_number_rock_plot <- ggplot() +
     aes(x = x, y = predicted),
     linewidth = 1) +
   labs(
-    x = "Scaled rock cover",
-    y = expression("Sea star density (stars " * m^{-2} * ")")) +
+    x = "Hard substrate cover (%)",
+    y = expression("Sea star density (individuals " * m^{-2} * ")")) +
   pub_theme1()
 full_debris_number_rock_plot
 
@@ -2136,7 +2128,8 @@ full_debris_number_cluster_plot <- ggplot() +
     width = 0.12,
     linewidth = 0.9) +
   geom_point(data = dock_pred, aes(x = x, y = predicted), size = 4) +
-  labs(x = "Cluster", y = expression("Sea star density (stars " * m ^
+  scale_x_discrete(labels = toupper) +
+  labs(x = "Cluster", y = expression("Sea star density (individuals " * m ^
                                             {
                                               -2
                                             } * ")")) +
@@ -2155,7 +2148,15 @@ density_plot_a <-
     heights = c(1.5, 1),
     axes = "collect_y",
     axis_titles = "collect_y"
-  )  + plot_annotation(tag_levels = "A")
+  )  + plot_annotation(tag_levels = "A") &
+  theme(
+    plot.tag.location = "panel",
+    plot.tag.position = c(0.03, 0.97),
+    plot.tag = element_text(
+      face = "bold",
+      size = 14,
+      hjust = 0,
+      vjust = 1))
 print(density_plot_a)
 ggsave(
   "figures/density_fulldebris.png",
@@ -2174,7 +2175,15 @@ density_plot_b <-
     heights = c(1.5, 1),
     axes = "collect_y",
     axis_titles = "collect_y"
-  )  + plot_annotation(tag_levels = "A")
+  )  + plot_annotation(tag_levels = "A") &
+  theme(
+    plot.tag.location = "panel",
+    plot.tag.position = c(0.03, 0.97),
+    plot.tag = element_text(
+      face = "bold",
+      size = 14,
+      hjust = 0,
+      vjust = 1))
 print(density_plot_b)
 ggsave(
   "figures/density_fullmussel.png",
