@@ -454,7 +454,7 @@ summary(full_mussel_number)
 
 #null binomial is better, so is spatial p and dockp, just gonna use nbinom then, getting rid of poisson code
 
-#AIC COMPETETING SIZE TIME-----
+#AIC COMPETING SIZE TIME-----
 
 
 ochre <- read_csv("data/stars_belt - Sheet1 (1).csv")  %>%
