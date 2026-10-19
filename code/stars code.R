@@ -452,8 +452,6 @@ full_mussel_number <- glmmTMB(
 )
 summary(full_mussel_number)
 
-#null binomial is better, so is spatial p and dockp, just gonna use nbinom then, getting rid of poisson code
-
 #AIC COMPETING SIZE TIME-----
 
 
@@ -626,6 +624,47 @@ full_dock_size <- glmmTMB(
 )
 summary(full_dock_size)
 simulateResiduals(full_dock_size, plot = TRUE)
+
+#adding more size stuff, so we know that the average size is larger, but why? Is it due to species or structures?----
+
+belt_site1 <- read_csv("data/stars_belt - Sheet1 (1).csv")# %>%
+  group_by(site, date) %>%
+  mutate(average_size = mean(size, na.rm = TRUE)) %>%
+  group_by(site, date, species, average_size) %>%
+  summarise(species_abundance = n(), .groups = "drop") %>%
+  group_by(site, date) %>%
+  mutate(total_abundance = sum(species_abundance, na.rm = TRUE)) %>%
+  ungroup()
+  
+#adding pair back to it
+  
+sizing_df <- belt_site1 %>%
+    full_join(site,
+              by = c("site", "date"),
+              relationship = "many-to-one") 
+
+sizing_df <- sizing_df %>%
+  drop_na(size, type, species, pair, site) %>%
+  filter(species %in% c("leather", "ochre", "mottled"))
+
+#good enough for the model
+
+sizing <- glmmTMB(size ~ type + species + (1|pair) + (1|site), dispformula = ~ species, data = sizing_df)
+simulateResiduals(sizing, plot = TRUE)
+summary(sizing)
+
+#try it again with an interaction
+
+sizing_int <- glmmTMB(size ~ type*species + (1|pair) + (1|site), dispformula = ~ species, data = sizing_df)
+simulateResiduals(sizing_int, plot = TRUE)
+summary(sizing_int)
+
+anova(sizing, sizing_int)
+
+#emmeans now
+
+emm_size <- emmeans(sizing_int, ~ type | species)
+pairs(emm_size, adjust = "tukey")
 
 #AIC competing time RICHNESS----
 
@@ -1825,7 +1864,7 @@ dock_size_plot <- ggplot() +
   ) +
   geom_point(data = dock_pred, aes(x = x, y = predicted), size = 4) +
   scale_x_discrete(labels = tools::toTitleCase) +
-  labs(x = "Site type", y = expression("Average sea star size (cm)")) +
+  labs(x = "Site type", y = expression("Abudance-weighted mean size (cm)")) +
   pub_theme1()
 print(dock_size_plot)
 ggsave(
@@ -1857,7 +1896,7 @@ full_size_plot <- ggplot() +
   ) +
   geom_point(data = dock_pred, aes(x = x, y = predicted), size = 4) +
   scale_x_discrete(labels = tools::toTitleCase) +
-  labs(x = "Site type", y = expression("Average sea star size (cm)")) +
+  labs(x = "Site type", y = expression("Abudance-weighted mean size (cm)")) +
   pub_theme1()
 print(full_size_plot)
 
@@ -1884,7 +1923,7 @@ dock_size_cluster_plot <- ggplot() +
     linewidth = 0.9) +
   geom_point(data = dock_pred, aes(x = x, y = predicted), size = 4) +
   scale_x_discrete(labels = toupper) +
-  labs(x = "Cluster", y = expression("Average sea star size (cm)")) +
+  labs(x = "Cluster", y = expression("Abudance-weighted mean size (cm)")) +
   pub_theme1()
 print(dock_size_cluster_plot)
 
@@ -1910,7 +1949,7 @@ full_dock_size_rock_plot <- ggplot() +
     linewidth = 1) +
   labs(
     x = "Hard substrate cover (%)",
-    y = expression("Average sea star size (cm)")) +
+    y = expression("Abudance-weighted mean size (cm)")) +
   pub_theme1()
 print(full_dock_size_rock_plot)
 
