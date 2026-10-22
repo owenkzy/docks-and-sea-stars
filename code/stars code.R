@@ -11,6 +11,14 @@ library(DHARMa)
 library(ggeffects)
 library(performance)
 library(rstatix)
+library(emmeans)
+library(effectsize)
+library(MuMIn)
+library(vegan)
+library(ggalt)
+library(ggrepel)
+library(patchwork)
+library(Hmisc)
 
 #load in data----
 
@@ -128,11 +136,11 @@ size <- glmmTMB(size ~ species + (1 |
 simulateResiduals(size, plot = TRUE)
 summary(size)
 
-library(emmeans)
 
 size_emm <- emmeans(size, ~ species)
 
 pairs(size_emm, adjust = "tukey")
+
 #among sites df----
 
 among <- site %>%
@@ -241,7 +249,7 @@ among_site <- among_site %>%
 
 #fishers exact test, have to do it pairwise
 
-library(effectsize)
+
 
 #debris and mussel
 debris_mussel <- table(among_site$debris_score, among_site$mussel_score)
@@ -331,70 +339,66 @@ check_collinearity(habitat)
 #dock model
 
 dock_debris <- glmmTMB(
-  total_abundance ~ debris_score + (1 |
-                                      pair) + cluster + offset(log(area_transect)),
+  total_abundance ~ debris_score + 
+    (1 |pair) + cluster + offset(log(area_transect)),
   family = nbinom2(link = "log"),
   data = among_site)
 
-summary(dock)
-simulateResiduals(dock, plot = TRUE)
-check_collinearity(dock)
+summary(dock_debris)
+simulateResiduals(dock_debris, plot = TRUE)
+check_collinearity(dock_debris)
 
 dock_mussel <- glmmTMB(
-  total_abundance ~ mussel_score + (1 |
-                                      pair) + cluster + offset(log(area_transect)),
+  total_abundance ~ mussel_score + 
+    (1 |pair) + cluster + offset(log(area_transect)),
   family = nbinom2(link = "log"),
-  data = among_site
-)
+  data = among_site)
+
 dock <- glmmTMB(
-  total_abundance ~ type + (1 |
-                              pair) + cluster + offset(log(area_transect)),
+  total_abundance ~ type + 
+    (1 |pair) + cluster + offset(log(area_transect)),
   family = nbinom2(link = "log"),
-  data = among_site
-)
+  data = among_site)
+
 dock_distance <- glmmTMB(
-  total_abundance ~ distance_scaled + (1 |
-                                         pair) + cluster + offset(log(area_transect)),
+  total_abundance ~ distance_scaled + 
+    (1 |pair) + cluster + offset(log(area_transect)),
   family = nbinom2(link = "log"),
-  data = among_site
-)
+  data = among_site)
 
-summary(distance)
-simulateResiduals(distance, plot = TRUE)
+summary(dock_distance)
+simulateResiduals(dock_distance, plot = TRUE)
+
 #full model
-
 full <- glmmTMB(
   total_abundance ~ type + slope_scaled + rock_scaled  +
-    (1 |
-       pair) + cluster + offset(log(area_transect)),
+    (1 |pair) + cluster + offset(log(area_transect)),
   family = nbinom2(link = "log"),
-  data = among_site
-)
+  data = among_site)
+
 full_debris <- glmmTMB(
   total_abundance ~ debris_score + slope_scaled + rock_scaled  +
-    (1 |
-       pair) + cluster + offset(log(area_transect)),
+    (1 |pair) + cluster + offset(log(area_transect)),
   family = nbinom2(link = "log"),
-  data = among_site
-)
+  data = among_site)
+
 summary(full_debris)
 simulateResiduals(full_debris, plot = TRUE)
+
 full_mussel <- glmmTMB(
   total_abundance ~ mussel_score + slope_scaled + rock_scaled  +
-    (1 |
-       pair) + cluster + offset(log(area_transect)),
+    (1 |pair) + cluster + offset(log(area_transect)),
   family = nbinom2(link = "log"),
-  data = among_site
-)
+  data = among_site)
+
 summary(full_mussel)
 
 full_distance <- glmmTMB(
   total_abundance ~ distance_scaled + slope_scaled + rock_scaled  +
-    (1 |
-       pair) + cluster + offset(log(area_transect)),
+    (1 |pair) + cluster + offset(log(area_transect)),
   family = nbinom2(link = "log"),
-  data = among_site
-)
+  data = among_site)
+
 summary(full)
 simulateResiduals(full, plot = TRUE)
 check_collinearity(full)
@@ -437,19 +441,17 @@ round(r2_values, 3)
 
 full_debris_number <- glmmTMB(
   total_abundance ~ debris_score + slope_scaled + rock_scaled  +
-    (1 |
-       pair) + cluster + offset(log(area_transect)),
+    (1 |pair) + cluster + offset(log(area_transect)),
   family = nbinom2(link = "log"),
-  data = among_site
-)
+  data = among_site)
+
 summary(full_debris_number)
 full_mussel_number <- glmmTMB(
   total_abundance ~ mussel_score + slope_scaled + rock_scaled  +
-    (1 |
-       pair) + cluster + offset(log(area_transect)),
+    (1 |pair) + cluster + offset(log(area_transect)),
   family = nbinom2(link = "log"),
-  data = among_site
-)
+  data = among_site)
+
 summary(full_mussel_number)
 
 #AIC COMPETING SIZE TIME-----
@@ -495,8 +497,7 @@ check_collinearity(spatial)
 habitat <- glmmTMB(
   site_average ~ slope_scaled + rock_scaled + (1 | pair),
   family = Gamma(link = "log"),
-  data = among_site
-)
+  data = among_site)
 summary(habitat)
 simulateResiduals(habitat, plot = TRUE)
 check_collinearity(habitat)
@@ -504,8 +505,7 @@ check_collinearity(habitat)
 
 #latitude model
 
-lat <- glmmTMB(site_average ~ lat_scaled + (1 | pair)
-               ,
+lat <- glmmTMB(site_average ~ lat_scaled + (1 | pair),
                family = Gamma(link = "log"),
                data = among_site)
 summary(lat)
@@ -515,30 +515,26 @@ simulateResiduals(lat, plot = TRUE)
 #dock model
 
 dock <- glmmTMB(
-  site_average ~ type + cluster + (1 |
-                                     pair),
+  site_average ~ type + cluster + (1 |pair),
   family = Gamma(link = "log"),
-  data = among_site
-)
+  data = among_site)
+
 dock_mussel <- glmmTMB(
-  site_average ~ mussel_score + cluster + (1 |
-                                             pair),
+  site_average ~ mussel_score + cluster + (1 |pair),
   family = Gamma(link = "log"),
-  data = among_site
-)
+  data = among_site)
+
 dock_debris <- glmmTMB(
-  site_average ~ debris_score + cluster + (1 |
-                                             pair),
+  site_average ~ debris_score + cluster + (1 |pair),
   family = Gamma(link = "log"),
-  data = among_site
-)
+  data = among_site)
+
 dock_distance <- glmmTMB(
   site_average ~ distance_scaled  +
-    (1 |
-       pair) + cluster,
+    (1 |pair) + cluster,
   family = Gamma(link = "log"),
-  data = among_site
-)
+  data = among_site)
+
 summary(dock)
 simulateResiduals(dock, plot = TRUE)
 check_collinearity(dock)
@@ -549,28 +545,26 @@ full <- glmmTMB(
   site_average ~ cluster + type + slope_scaled +  rock_scaled +
     (1 | pair),
   family = Gamma(link = "log"),
-  data = among_site
-)
+  data = among_site)
 
 full_mussel <- glmmTMB(
   site_average ~ cluster + mussel_score + slope_scaled +  rock_scaled +
     (1 | pair),
   family = Gamma(link = "log"),
-  data = among_site
-)
+  data = among_site)
+
 full_debris <- glmmTMB(
   site_average ~ cluster + debris_score + slope_scaled +  rock_scaled +
     (1 | pair),
   family = Gamma(link = "log"),
-  data = among_site
-)
+  data = among_site)
+
 full_distance <- glmmTMB(
   site_average ~ distance_scaled + slope_scaled + rock_scaled  +
-    (1 |
-       pair) + cluster,
+    (1 |pair) + cluster,
   family = Gamma(link = "log"),
-  data = among_site
-)
+  data = among_site)
+
 summary(full)
 simulateResiduals(full, plot = TRUE)
 check_collinearity(full)
@@ -609,41 +603,38 @@ round(r2_values, 3)
 
 #ggeffects time, needs the models saved so need a unique ID
 dock_size <- glmmTMB(
-  site_average ~ type + cluster + (1 |
-                                     pair),
+  site_average ~ type + cluster + (1 |pair),
   family = Gamma(link = "log"),
-  data = among_site
-)
+  data = among_site)
+
 summary(dock_size)
 
 full_dock_size <- glmmTMB(
   site_average ~ cluster + type + slope_scaled +  rock_scaled +
     (1 | pair),
   family = Gamma(link = "log"),
-  data = among_site
-)
+  data = among_site)
+
 summary(full_dock_size)
 simulateResiduals(full_dock_size, plot = TRUE)
 
 #adding more size stuff, so we know that the average size is larger, but why? Is it due to species or structures?----
 
-belt_site1 <- read_csv("data/stars_belt - Sheet1 (1).csv")# %>%
-  group_by(site, date) %>%
-  mutate(average_size = mean(size, na.rm = TRUE)) %>%
-  group_by(site, date, species, average_size) %>%
-  summarise(species_abundance = n(), .groups = "drop") %>%
-  group_by(site, date) %>%
-  mutate(total_abundance = sum(species_abundance, na.rm = TRUE)) %>%
-  ungroup()
-  
-#adding pair back to it
-  
-sizing_df <- belt_site1 %>%
-    full_join(site,
-              by = c("site", "date"),
-              relationship = "many-to-one") 
+belt_site1 <- read_csv("data/stars_belt - Sheet1 (1).csv") #%>%
+#  group_by(site, date) %>%
+#  mutate(average_size = mean(size, na.rm = TRUE)) %>%
+#  group_by(site, date, species, average_size) %>%
+#  summarise(species_abundance = n(), .groups = "drop") %>%
+#  group_by(site, date) %>%
+#  mutate(total_abundance = sum(species_abundance, na.rm = TRUE)) %>%
+#  ungroup()
 
-sizing_df <- sizing_df %>%
+#adding pair back to it
+
+sizing_df <- belt_site1 %>%
+  full_join(site,
+            by = c("site", "date"),
+            relationship = "many-to-one")  %>%
   drop_na(size, type, species, pair, site) %>%
   filter(species %in% c("leather", "ochre", "mottled"))
 
@@ -670,8 +661,7 @@ pairs(emm_size, adjust = "tukey")
 
 
 #null model
-null <- glmmTMB(richness ~ 1 + (1 |
-                                  pair),
+null <- glmmTMB(richness ~ 1 + (1 |pair),
                 family = Gamma(link = "log"),
                 data = among_site)
 summary(null)
@@ -691,16 +681,15 @@ check_collinearity(spatial)
 habitat <- glmmTMB(
   richness ~ slope_scaled + rock_scaled + (1 | pair),
   family = Gamma(link = "log"),
-  data = among_site
-)
+  data = among_site)
+
 summary(habitat)
 simulateResiduals(habitat, plot = TRUE)
 check_collinearity(habitat)
 
 #latitude model
 
-lat <- glmmTMB(richness ~ lat_scaled + (1 | pair)
-               ,
+lat <- glmmTMB(richness ~ lat_scaled + (1 | pair),
                family = Gamma(link = "log"),
                data = among_site)
 summary(lat)
@@ -709,30 +698,24 @@ simulateResiduals(lat, plot = TRUE)
 
 #dock model
 
-dock <- glmmTMB(richness ~ type + cluster + (1 |
-                                               pair),
+dock <- glmmTMB(richness ~ type + cluster + (1 | pair),
                 family = Gamma(link = "log"),
                 data = among_site)
 dock_mussel <- glmmTMB(
-  richness ~ mussel_score + cluster + (1 |
-                                         pair),
+  richness ~ mussel_score + cluster + (1 | pair),
   family = Gamma(link = "log"),
-  data = among_site
-)
+  data = among_site)
+
 dock_debris <- glmmTMB(
-  richness ~ debris_score + cluster + (1 |
-                                         pair),
+  richness ~ debris_score + cluster + (1 |pair),
   family = Gamma(link = "log"),
-  data = among_site
-)
+  data = among_site)
 
 dock_distance <- glmmTMB(
   richness ~ distance_scaled  +
-    (1 |
-       pair) + cluster,
+    (1 |pair) + cluster,
   family = Gamma(link = "log"),
-  data = among_site
-)
+  data = among_site)
 summary(dock)
 simulateResiduals(dock, plot = TRUE)
 check_collinearity(dock)
@@ -743,28 +726,27 @@ full <- glmmTMB(
   richness ~ cluster + type + slope_scaled +  rock_scaled +
     (1 | pair),
   family = Gamma(link = "log"),
-  data = among_site
-)
+  data = among_site)
 
 full_mussel <- glmmTMB(
   richness ~ cluster + mussel_score + slope_scaled + rock_scaled +
     (1 | pair),
   family = Gamma(link = "log"),
-  data = among_site
-)
+  data = among_site)
+
 full_debris <- glmmTMB(
   richness ~ cluster + debris_score + slope_scaled +  rock_scaled +
     (1 | pair),
   family = Gamma(link = "log"),
-  data = among_site
-)
+  data = among_site)
+
 full_distance <- glmmTMB(
   richness ~ distance_scaled + slope_scaled + rock_scaled  +
     (1 |
        pair) + cluster,
   family = Gamma(link = "log"),
-  data = among_site
-)
+  data = among_site)
+
 summary(full)
 simulateResiduals(full, plot = TRUE)
 check_collinearity(full)
@@ -785,8 +767,6 @@ model_set <- list(
   dock_debris = dock_debris,
   full_distance = full_distance,
   dock_distance = dock_distance
-  
-  
 )
 model_selection <- MuMIn::model.sel(model_set, rank = "AICc")
 
@@ -807,8 +787,7 @@ round(r2_values, 3)
 
 #something weird below, 2026-09-14, I forgot why I made this code below
 
-null_rich <- glmmTMB(richness ~ 1 + (1 |
-                                       pair),
+null_rich <- glmmTMB(richness ~ 1 + (1 |pair),
                      family = Gamma(link = "log"),
                      data = among_site)
 summary(null_rich)
@@ -834,8 +813,6 @@ community$site <- NULL
 community <- sqrt(community)
 
 #vegan time?
-library(vegan)
-
 community_dist <- vegdist(community, method = "bray")
 
 community_dist
@@ -895,8 +872,7 @@ species_scores <- as.data.frame(scores(nmds, display = "species"))
 
 species_scores$species <- rownames(species_scores)
 
-library(ggalt)
-
+# this uses ggalt
 ggplot(nmds_scores, aes(x = NMDS1, y = NMDS2, colour = type)) +
   coord_equal() +
   geom_hline(yintercept = 0,
@@ -919,9 +895,7 @@ ggplot(nmds_scores, aes(x = NMDS1, y = NMDS2, colour = type)) +
   scale_x_continuous(expand = c(.01, .05)) +
   theme(legend.position = 'bottom', panel.grid = element_blank())
 
-
-library(ggrepel)
-
+# this uses ggrepel
 ggplot(nmds_scores, aes(NMDS1, NMDS2)) +
   geom_mark_hull(
     aes(colour = type, fill = type),
@@ -1060,7 +1034,7 @@ make_nmds_plot <- function(groups, show_species = FALSE) {
       legend.title = element_text(face = "bold"),
       plot.margin = margin(10, 20, 10, 15))
   
-#Add species labels only when requested
+  #Add species labels only when requested
   if (show_species) {
     p <- p +
       geom_text_repel(
@@ -1245,8 +1219,6 @@ pairwise_results
 
 #envfit
 
-library(vegan)
-
 species_fit <- envfit(nmds, belt_site_wide[, c("leather", "mottled", "ochre", "blood", "sunflower", "pink")], permutations = 999)
 
 species_fit
@@ -1267,7 +1239,6 @@ vec_sig <- vec |>
 vec_sig
 arrow_scale <- 0.65
 
-library(ggrepel)
 
 nmds_3 +
   geom_segment(
@@ -1317,7 +1288,7 @@ vec_sig <- vec_sig |>
 
 #Final NMDS plot
 nmds_final <- nmds_3 +
-geom_segment(
+  geom_segment(
     data = vec_sig,
     aes(
       x = 0,
@@ -1336,7 +1307,7 @@ geom_segment(
   theme(
     legend.position = "bottom",
     legend.direction = "horizontal",
-        legend.title = element_text(size = 12, face = "bold"),
+    legend.title = element_text(size = 12, face = "bold"),
     legend.text = element_text(size = 11),
     axis.title = element_text(size = 14),
     axis.text = element_text(size = 11),
@@ -1369,15 +1340,9 @@ sun <- read_csv("data/pycno_data - Sheet1.csv") %>%
     average_pycno_size = replace(average_pycno_size, is.nan(average_pycno_size), NA_real_)
   ) %>%
   ungroup() %>%
-  distinct(site, pycno_count, average_pycno_size)
-
+  distinct(site, pycno_count, average_pycno_size) %>%
 #leftjoin it to full data
-
-sun <- sun %>%
-  left_join(among_site, by = "site")
-
-
-sun <- sun %>%
+  left_join(among_site, by = "site") %>%
   mutate(pycno_density = pycno_count / (transect_length * 6),
          transect_rove_area = transect_length * 2)
 
@@ -1385,8 +1350,8 @@ sun <- sun %>%
 
 #null model
 null <- glmmTMB(
-  pycno_count ~ 1 + (1 |
-                       pair) + offset(log(area_transect)),
+  pycno_count ~ 1 + 
+    (1 |pair) + offset(log(area_transect)),
   family = nbinom2(link = "log"),
   data = sun)
 summary(null)
@@ -1410,8 +1375,7 @@ lat <- glmmTMB(
   pycno_count ~ lat_scaled + (1 | pair) +
     offset(log(area_transect)),
   family = nbinom2(link = "log"),
-  data = sun
-)
+  data = sun)
 summary(lat)
 simulateResiduals(lat, plot = TRUE)
 
@@ -1422,8 +1386,7 @@ habitat <- glmmTMB(
   pycno_count ~ slope_scaled + rock_scaled + cluster + (1 | pair) +
     offset(log(area_transect)),
   family = nbinom2(link = "log"),
-  data = sun
-)
+  data = sun)
 summary(habitat)
 simulateResiduals(habitat, plot = TRUE)
 check_collinearity(habitat)
@@ -1431,65 +1394,60 @@ check_collinearity(habitat)
 #dock model
 
 dock_debris <- glmmTMB(
-  pycno_count ~ debris_score + (1 |
-                                  pair) + cluster + offset(log(area_transect)),
+  pycno_count ~ debris_score + 
+    (1 |pair) + cluster + offset(log(area_transect)),
   family = nbinom2(link = "log"),
-  data = sun
-)
+  data = sun)
+
 summary(dock)
 simulateResiduals(dock, plot = TRUE)
 check_collinearity(dock)
 
 dock_mussel <- glmmTMB(
-  pycno_count ~ mussel_score + (1 |
-                                  pair) + cluster + offset(log(area_transect)),
+  pycno_count ~ mussel_score + 
+    (1 |pair) + cluster + offset(log(area_transect)),
   family = nbinom2(link = "log"),
-  data = sun
-)
+  data = sun)
+
 dock <- glmmTMB(
-  pycno_count ~ type + (1 |
-                          pair) + cluster + offset(log(area_transect)),
+  pycno_count ~ type + 
+    (1 |pair) + cluster + offset(log(area_transect)),
   family = nbinom2(link = "log"),
-  data = sun
-)
+  data = sun)
+
 dock_distance <- glmmTMB(
-  pycno_count ~ distance_scaled + (1 |
-                                     pair) + cluster + offset(log(area_transect)),
+  pycno_count ~ distance_scaled + 
+    (1 |pair) + cluster + offset(log(area_transect)),
   family = nbinom2(link = "log"),
-  data = sun
-)
+  data = sun)
 
 #full model
 
 full <- glmmTMB(
   pycno_count ~ type + slope_scaled + rock_scaled  +
-    (1 |
-       pair) + cluster + offset(log(area_transect)),
+    (1 |pair) + cluster + offset(log(area_transect)),
   family = nbinom2(link = "log"),
   data = sun
 )
 full_debris <- glmmTMB(
   pycno_count ~ debris_score + slope_scaled + rock_scaled  +
-    (1 |
-       pair) + cluster + offset(log(area_transect)),
+    (1 |pair) + cluster + offset(log(area_transect)),
   family = nbinom2(link = "log"),
-  data = sun
-)
+  data = sun)
+
 summary(full_debris)
 simulateResiduals(full_debris, plot = TRUE)
+
 full_mussel <- glmmTMB(
   pycno_count ~ mussel_score + slope_scaled + rock_scaled  +
-    (1 |
-       pair) + cluster + offset(log(area_transect)),
+    (1 |pair) + cluster + offset(log(area_transect)),
   family = nbinom2(link = "log"),
-  data = sun
-)
+  data = sun)
 summary(full_mussel)
 
 full_distance <- glmmTMB(
   pycno_count ~ distance_scaled + slope_scaled + rock_scaled  +
-    (1 |
-       pair) + cluster + offset(log(area_transect)),
+    (1 | pair) + cluster + offset(log(area_transect)),
   family = nbinom2(link = "log"),
   data = sun
 )
@@ -1808,7 +1766,6 @@ pub_theme1 <- function() {
     )
 }
 
-library(patchwork)
 
 #first thing first, mussel score and debris score are confounding----
 
@@ -1908,7 +1865,7 @@ print(full_size_plot)
 
 dock_pred <- ggeffects::ggpredict(dock_size,
                                   terms = "cluster"
-                                  )
+)
 
 dock_size_cluster_plot <- ggplot() +
   geom_jitter(
@@ -1933,7 +1890,7 @@ print(dock_size_cluster_plot)
 #rock scaled for full dock size
 dock_pred <- ggeffects::ggpredict(full_dock_size,
                                   terms = "rock_scaled"
-                                  )
+)
 
 full_dock_size_rock_plot <- ggplot() +
   geom_point(
@@ -2171,9 +2128,9 @@ full_debris_number_cluster_plot <- ggplot() +
   geom_point(data = dock_pred, aes(x = x, y = predicted), size = 4) +
   scale_x_discrete(labels = toupper) +
   labs(x = "Cluster", y = expression("Sea star density (individuals " * m ^
-                                            {
-                                              -2
-                                            } * ")")) +
+                                       {
+                                         -2
+                                       } * ")")) +
   pub_theme1()
 print(full_debris_number_cluster_plot)
 
