@@ -1845,6 +1845,7 @@ print(score_plot)
 
 #dock and full_dock_size is the best model for size----
 summary(dock_size)
+simulateResiduals(dock_size, plot = TRUE)
 dock_pred <- ggeffects::ggpredict(dock_size, terms = "type")
 
 dock_size_plot <- ggplot() +
@@ -1877,6 +1878,7 @@ ggsave(
 
 #now for the full model
 summary(full_dock_size)
+simulateResiduals(full_dock_size, plot = TRUE)
 dock_pred <- ggeffects::ggpredict(full_dock_size, terms = "type")
 
 full_size_plot <- ggplot() +
@@ -2012,7 +2014,7 @@ among_site <- among_site %>%
   mutate(star_density = total_abundance / (transect_length * 2))
 
 #graph for debris
-
+simulateResiduals(full_debris_number, plot = TRUE)
 dock_pred <- ggeffects::ggpredict(full_debris_number,
                                   terms = "debris_score",
                                   condition = c(area_transect = 1))
@@ -2039,7 +2041,7 @@ full_debris_number_plot <- ggplot() +
 print(full_debris_number_plot)
 
 #graph for mussels
-
+simulateResiduals(full_mussel_number, plot = TRUE)
 
 dock_pred <- ggeffects::ggpredict(full_mussel_number,
                                   terms = "mussel_score",
